@@ -26,6 +26,7 @@ export default function LeadsView({ onConvertedToJob }) {
   const [selected, setSelected] = useState(null);
   const [converting, setConverting] = useState(false);
   const [filter, setFilter] = useState("New");
+  const [adding, setAdding] = useState(false);
 
   const load = useCallback(() => {
     apiGet("getLeads").then(d => setLeads(d.leads)).catch(e => setError(e.message));
@@ -51,7 +52,12 @@ export default function LeadsView({ onConvertedToJob }) {
 
   return (
     <div style={{ paddingBottom: 80 }}>
-      <Header title="Leads" right={<Button variant="ghost" onClick={load}>↻</Button>} />
+      <Header title="Leads" right={
+        <div style={{ display: "flex", gap: 8 }}>
+          <Button variant="ghost" onClick={load}>↻</Button>
+          <Button onClick={() => setAdding(true)}>+ Add</Button>
+        </div>
+      } />
 
       <div style={{ display: "flex", gap: 5, padding: "12px 16px 0" }} className="no-print">
         {LEAD_STATUSES.map(s => (
@@ -133,6 +139,53 @@ export default function LeadsView({ onConvertedToJob }) {
           />
         </Modal>
       )}
+
+      {adding && (
+        <Modal title="Add Lead" onClose={() => setAdding(false)}>
+          <AddLeadForm onAdded={() => { setAdding(false); load(); }} />
+        </Modal>
+      )}
+    </div>
+  );
+}
+
+function AddLeadForm({ onAdded }) {
+  const [form, setForm] = useState({
+    name: "", phone: "", email: "", location: "", vehicleReg: "",
+    vehicleMakeModel: "", serviceRequired: "", damageDescription: "",
+    preferredContactTime: "", howFoundUs: ""
+  });
+  const [saving, setSaving] = useState(false);
+  const set = (k) => (e) => setForm(f => ({ ...f, [k]: e.target.value }));
+
+  const submit = async () => {
+    if (!form.name.trim()) { alert("Name is required"); return; }
+    setSaving(true);
+    try {
+      await apiPost("createLead", form);
+      onAdded();
+    } catch (e) { alert(e.message); } finally { setSaving(false); }
+  };
+
+  return (
+    <div>
+      <Field label="Name *"><Input value={form.name} onChange={set("name")} /></Field>
+      <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 12 }}>
+        <Field label="Phone"><Input value={form.phone} onChange={set("phone")} /></Field>
+        <Field label="Email"><Input value={form.email} onChange={set("email")} /></Field>
+      </div>
+      <Field label="Location"><Input value={form.location} onChange={set("location")} /></Field>
+      <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 12 }}>
+        <Field label="Vehicle Reg"><Input value={form.vehicleReg} onChange={set("vehicleReg")} /></Field>
+        <Field label="Make & Model"><Input value={form.vehicleMakeModel} onChange={set("vehicleMakeModel")} /></Field>
+      </div>
+      <Field label="Service Required"><Input value={form.serviceRequired} onChange={set("serviceRequired")} /></Field>
+      <Field label="Damage Description"><Textarea value={form.damageDescription} onChange={set("damageDescription")} /></Field>
+      <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 12 }}>
+        <Field label="Preferred Contact Time"><Input value={form.preferredContactTime} onChange={set("preferredContactTime")} /></Field>
+        <Field label="How Found Us"><Input value={form.howFoundUs} onChange={set("howFoundUs")} /></Field>
+      </div>
+      <Button onClick={submit} disabled={saving} style={{ width: "100%" }}>{saving ? "Adding…" : "Add Lead"}</Button>
     </div>
   );
 }

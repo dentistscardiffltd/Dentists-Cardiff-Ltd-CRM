@@ -105,14 +105,14 @@ export function Textarea(props) {
 
 export function Modal({ children, onClose, title, wide }) {
   return (
-    <div onClick={onClose} style={{
+    <div style={{
       position: "fixed", inset: 0, background: "rgba(0,0,0,.6)",
       display: "flex", alignItems: "flex-end", justifyContent: "center", zIndex: 100
     }}>
       <div onClick={e => e.stopPropagation()} style={{
         background: t.dark, borderTop: `1px solid ${t.border}`,
         borderRadius: "18px 18px 0 0", width: "100%", maxWidth: wide ? 720 : 480,
-        maxHeight: "92vh", overflowY: "auto", padding: "20px 18px 28px",
+        maxHeight: "92vh", overflowY: "auto", overscrollBehavior: "contain", padding: "20px 18px 28px",
         animation: "slideUp .2s ease"
       }}>
         <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 16 }}>

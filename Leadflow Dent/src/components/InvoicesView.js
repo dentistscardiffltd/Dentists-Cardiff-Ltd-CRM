@@ -13,6 +13,7 @@ export default function InvoicesView({ prefillJob, clearPrefill }) {
   const [invoices, setInvoices] = useState(null);
   const [error, setError] = useState(null);
   const [building, setBuilding] = useState(false);
+  const [editingInvoice, setEditingInvoice] = useState(null);
   const [viewing, setViewing] = useState(null);
 
   const load = useCallback(() => {
@@ -23,6 +24,8 @@ export default function InvoicesView({ prefillJob, clearPrefill }) {
   useEffect(() => {
     if (prefillJob) setBuilding(true);
   }, [prefillJob]);
+
+  const closeBuilder = () => { setBuilding(false); setEditingInvoice(null); clearPrefill && clearPrefill(); };
 
   return (
     <div style={{ paddingBottom: 80 }}>
@@ -59,10 +62,11 @@ export default function InvoicesView({ prefillJob, clearPrefill }) {
       </div>
 
       {building && (
-        <Modal title="New Invoice" onClose={() => { setBuilding(false); clearPrefill && clearPrefill(); }} wide>
+        <Modal title={editingInvoice ? `Edit ${editingInvoice.invoiceNumber}` : "New Invoice"} onClose={closeBuilder} wide>
           <InvoiceBuilder
             prefillJob={prefillJob}
-            onCreated={() => { setBuilding(false); clearPrefill && clearPrefill(); load(); }}
+            existingInvoice={editingInvoice}
+            onCreated={() => { closeBuilder(); load(); }}
           />
         </Modal>
       )}
@@ -75,6 +79,11 @@ export default function InvoicesView({ prefillJob, clearPrefill }) {
               await apiPost("updateInvoiceStatus", { invoiceId: viewing.id, status });
               setViewing(v => ({ ...v, status }));
               setInvoices(list => list.map(i => i.id === viewing.id ? { ...i, status } : i));
+            }}
+            onEdit={() => {
+              setEditingInvoice(viewing);
+              setViewing(null);
+              setBuilding(true);
             }}
           />
         </Modal>
@@ -189,8 +198,24 @@ const blankForm = () => ({
   paymentMethods: BUSINESS.paymentMethods, notes: "", jobId: ""
 });
 
-function InvoiceBuilder({ prefillJob, onCreated }) {
+function InvoiceBuilder({ prefillJob, existingInvoice, onCreated }) {
   const [form, setForm] = useState(() => {
+    if (existingInvoice) {
+      return {
+        clientName: existingInvoice.clientName || "",
+        clientEmail: existingInvoice.clientEmail || "",
+        clientAddress: existingInvoice.clientAddress || "",
+        vehicleReg: existingInvoice.vehicleReg || "",
+        lineItems: (existingInvoice.lineItems && existingInvoice.lineItems.length > 0)
+          ? existingInvoice.lineItems
+          : [{ description: "", qty: 1, price: "", notes: "" }],
+        paymentMethods: existingInvoice.paymentMethods
+          ? String(existingInvoice.paymentMethods).split(",").map(s => s.trim()).filter(Boolean)
+          : BUSINESS.paymentMethods,
+        notes: existingInvoice.notes || "",
+        jobId: existingInvoice.jobId || ""
+      };
+    }
     if (prefillJob) {
       return {
         clientName: prefillJob.clientName || "",
@@ -213,10 +238,12 @@ function InvoiceBuilder({ prefillJob, onCreated }) {
   const firstRender = useRef(true);
 
   // Autosave the draft as the user types, so backing out doesn't lose it.
+  // Skipped while editing an existing saved invoice — that's not "the" draft slot.
   useEffect(() => {
+    if (existingInvoice) return;
     if (firstRender.current) { firstRender.current = false; return; }
     try { localStorage.setItem(DRAFT_KEY, JSON.stringify(form)); } catch (e) { /* storage full/unavailable */ }
-  }, [form]);
+  }, [form, existingInvoice]);
 
   const total = form.lineItems.reduce((sum, li) => sum + (Number(li.qty) || 0) * (Number(li.price) || 0), 0);
 
@@ -250,21 +277,26 @@ function InvoiceBuilder({ prefillJob, onCreated }) {
     if (!form.clientName.trim()) { alert("Client name is required"); return; }
     setSaving(true);
     try {
-      await apiPost("createInvoice", {
+      const payload = {
         jobId: form.jobId,
         clientName: form.clientName, clientEmail: form.clientEmail,
         clientAddress: form.clientAddress, vehicleReg: form.vehicleReg,
         lineItems: form.lineItems.filter(li => li.description.trim()),
         paymentMethods: form.paymentMethods, notes: form.notes
-      });
-      clearDraft();
+      };
+      if (existingInvoice) {
+        await apiPost("updateInvoice", { invoiceId: existingInvoice.id, ...payload });
+      } else {
+        await apiPost("createInvoice", payload);
+        clearDraft();
+      }
       onCreated();
     } catch (e) { alert(e.message); } finally { setSaving(false); }
   };
 
   return (
     <div>
-      {!prefillJob && <LeadSearch onPick={fillFromLead} />}
+      {!prefillJob && !existingInvoice && <LeadSearch onPick={fillFromLead} />}
 
       <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 12 }}>
         <Field label="Client Name *"><Input value={form.clientName} onChange={e => setForm(f => ({ ...f, clientName: e.target.value }))} /></Field>
@@ -298,19 +330,25 @@ function InvoiceBuilder({ prefillJob, onCreated }) {
 
       <Field label="Notes"><Textarea value={form.notes} onChange={e => setForm(f => ({ ...f, notes: e.target.value }))} /></Field>
 
-      <div style={{ fontSize: 11, color: t.dim, marginBottom: 10 }}>
-        This draft saves automatically — safe to back out and come back later.
-      </div>
+      {!existingInvoice && (
+        <div style={{ fontSize: 11, color: t.dim, marginBottom: 10 }}>
+          This draft saves automatically — safe to back out and come back later.
+        </div>
+      )}
       <div style={{ display: "flex", gap: 10 }}>
-        <Button variant="outline" onClick={() => { clearDraft(); setForm(blankForm()); }} style={{ flex: "0 0 auto" }}>Clear Draft</Button>
-        <Button onClick={submit} disabled={saving} style={{ flex: 1 }}>{saving ? "Saving…" : "Save Invoice"}</Button>
+        {!existingInvoice && (
+          <Button variant="outline" onClick={() => { clearDraft(); setForm(blankForm()); }} style={{ flex: "0 0 auto" }}>Clear Draft</Button>
+        )}
+        <Button onClick={submit} disabled={saving} style={{ flex: 1 }}>
+          {saving ? "Saving…" : existingInvoice ? "Save Changes" : "Save Invoice"}
+        </Button>
       </div>
     </div>
   );
 }
 
 /* ═══════════════════ PREVIEW / PDF / EMAIL ═══════════════════ */
-function InvoicePreview({ invoice, onStatusChange }) {
+function InvoicePreview({ invoice, onStatusChange, onEdit }) {
   const [sending, setSending] = useState(false);
   const [downloading, setDownloading] = useState(false);
 
@@ -369,7 +407,6 @@ function InvoicePreview({ invoice, onStatusChange }) {
           </tbody>
         </table>
         <div style={{ textAlign: "right", fontSize: 16, fontWeight: 800, marginTop: 10 }}>Total Due: £{invoice.total}</div>
-        <div style={{ fontSize: 12, color: "#666", marginTop: 4 }}>Not VAT registered.</div>
         <hr style={{ border: "none", borderTop: "1px solid #eee", margin: "14px 0" }} />
         <div style={{ fontSize: 12 }}><strong>Payment Methods:</strong> {invoice.paymentMethods}</div>
         <div style={{ fontSize: 12, color: "#666" }}>Bank Transfer — {BUSINESS.bank.accountName} · Sort Code {BUSINESS.bank.sortCode} · Account {BUSINESS.bank.accountNumber}</div>
@@ -379,6 +416,9 @@ function InvoicePreview({ invoice, onStatusChange }) {
 
       <div className="no-print" style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
         <Select value={invoice.status} options={INVOICE_STATUSES} onChange={e => onStatusChange(e.target.value)} style={{ flex: 1 }} />
+        {invoice.status === "Draft" && (
+          <Button variant="outline" onClick={onEdit}>✏️ Edit</Button>
+        )}
         <Button variant="outline" onClick={download} disabled={downloading}>{downloading ? "Generating…" : "⬇️ Download PDF"}</Button>
         <Button onClick={send} disabled={sending || !invoice.clientEmail}>{sending ? "Sending…" : "✉️ Email to Client"}</Button>
       </div>
