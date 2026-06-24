@@ -1,0 +1,19 @@
+* { box-sizing: border-box; }
+html, body { margin: 0; padding: 0; }
+body {
+  font-family: 'Nunito Sans', sans-serif;
+  background: #0d0f0a;
+  color: #eef0ea;
+  -webkit-font-smoothing: antialiased;
+}
+input, select, textarea, button {
+  font-family: inherit;
+}
+button { cursor: pointer; }
+a { color: inherit; }
+::-webkit-scrollbar { width: 8px; height: 8px; }
+::-webkit-scrollbar-thumb { background: #2a3020; border-radius: 4px; }
+
+@media print {
+  .no-print { display: none !important; }
+}
