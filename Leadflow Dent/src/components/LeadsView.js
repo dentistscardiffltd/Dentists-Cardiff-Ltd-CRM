@@ -34,9 +34,19 @@ export default function LeadsView({ onConvertedToJob }) {
   useEffect(() => { load(); }, [load]);
 
   const updateStatus = async (lead, status) => {
+    const previousStatus = lead.status;
+    // Optimistic update for instant feedback...
     setLeads(ls => ls.map(l => l.id === lead.id ? { ...l, status } : l));
     setSelected(s => s && s.id === lead.id ? { ...s, status } : s);
-    try { await apiPost("updateLeadStatus", { leadId: lead.id, status }); } catch (e) { /* ignore, will resync on reload */ }
+    try {
+      await apiPost("updateLeadStatus", { leadId: lead.id, status });
+    } catch (e) {
+      // ...but if the save actually failed, undo it and say so — never
+      // leave the screen showing a status that isn't really saved.
+      setLeads(ls => ls.map(l => l.id === lead.id ? { ...l, status: previousStatus } : l));
+      setSelected(s => s && s.id === lead.id ? { ...s, status: previousStatus } : s);
+      alert("Couldn't save that change: " + e.message + "\n\nPlease try again.");
+    }
   };
 
   return (
@@ -112,9 +122,11 @@ export default function LeadsView({ onConvertedToJob }) {
           <ConvertForm
             lead={selected}
             onDone={(jobId) => {
+              // The backend already marks the lead "Booked" as part of
+              // converting it — just reflect that locally, no second write.
+              setLeads(ls => ls.map(l => l.id === selected.id ? { ...l, status: "Booked" } : l));
               setConverting(false);
               setSelected(null);
-              updateStatus(selected, "Converted");
               if (onConvertedToJob) onConvertedToJob(jobId);
             }}
           />
