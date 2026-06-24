@@ -5,7 +5,7 @@ import { LEAD_STATUSES } from "../config";
 import Header from "./Header";
 import { Card, Badge, Button, Modal, EmptyState, Spinner, Field, Select, Input, Textarea } from "./shared";
 
-const statusColors = { New: t.green, Booked: t.amber, "N/A": t.dim };
+const statusColors = { New: t.green, Contacted: t.amber, Booked: t.greenLight, "N/A": t.dim };
 
 function timeAgo(ts) {
   if (!ts) return "";
@@ -53,15 +53,15 @@ export default function LeadsView({ onConvertedToJob }) {
     <div style={{ paddingBottom: 80 }}>
       <Header title="Leads" right={<Button variant="ghost" onClick={load}>↻</Button>} />
 
-      <div style={{ display: "flex", gap: 6, padding: "12px 16px 0" }} className="no-print">
+      <div style={{ display: "flex", gap: 5, padding: "12px 16px 0" }} className="no-print">
         {LEAD_STATUSES.map(s => (
           <button key={s} onClick={() => setFilter(s)} style={{
-            flex: 1, padding: "8px 0", borderRadius: 10, fontSize: 12, fontWeight: 800,
+            flex: 1, padding: "8px 2px", borderRadius: 10, fontSize: 11, fontWeight: 800,
             border: `1px solid ${filter === s ? t.green : t.border}`,
             background: filter === s ? `${t.green}1a` : "transparent",
             color: filter === s ? t.green : t.muted, cursor: "pointer"
           }}>
-            {s === "New" ? "New" : s === "Booked" ? "Booked" : "N/A"}
+            {s}
           </button>
         ))}
       </div>
@@ -113,6 +113,7 @@ export default function LeadsView({ onConvertedToJob }) {
             lead={selected}
             onStatusChange={(status) => updateStatus(selected, status)}
             onConvert={() => setConverting(true)}
+            onDone={() => setSelected(null)}
           />
         </Modal>
       )}
@@ -136,7 +137,7 @@ export default function LeadsView({ onConvertedToJob }) {
   );
 }
 
-function LeadDetail({ lead, onStatusChange, onConvert }) {
+function LeadDetail({ lead, onStatusChange, onConvert, onDone }) {
   const rows = [
     ["Phone", lead.phone], ["Email", lead.email], ["Location", lead.location],
     ["Vehicle Reg", lead.vehicleReg], ["Make & Model", lead.vehicleMakeModel],
@@ -188,6 +189,7 @@ function LeadDetail({ lead, onStatusChange, onConvert }) {
         <Button variant="outline" onClick={() => window.open(`tel:${(lead.phone || "").replace(/\s/g, "")}`)}>📞</Button>
         <Button variant="outline" onClick={() => window.open(`mailto:${lead.email || ""}`)}>✉️</Button>
       </div>
+      <Button variant="outline" onClick={onDone} style={{ width: "100%", marginTop: 10 }}>✓ Done</Button>
     </div>
   );
 }

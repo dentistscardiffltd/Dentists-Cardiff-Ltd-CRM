@@ -228,16 +228,20 @@ function InvoiceBuilder({ prefillJob, onCreated }) {
   }));
 
   const fillFromLead = (lead) => {
-    setForm(f => ({
-      ...f,
-      clientName: lead.name || f.clientName,
-      clientEmail: lead.email || f.clientEmail,
-      clientAddress: lead.location || f.clientAddress,
-      vehicleReg: lead.vehicleReg || f.vehicleReg,
-      lineItems: lead.serviceRequired && !f.lineItems[0].description
-        ? [{ description: lead.serviceRequired, qty: 1, price: "", notes: "" }, ...f.lineItems.slice(1)]
-        : f.lineItems
-    }));
+    setForm(f => {
+      const firstItem = f.lineItems[0];
+      const shouldFillFirstItem = Boolean(lead.serviceRequired) && firstItem && !firstItem.description;
+      return {
+        ...f,
+        clientName: lead.name || f.clientName,
+        clientEmail: lead.email || f.clientEmail,
+        clientAddress: lead.location || f.clientAddress,
+        vehicleReg: lead.vehicleReg || f.vehicleReg,
+        lineItems: shouldFillFirstItem
+          ? [{ description: lead.serviceRequired, qty: 1, price: "", notes: "" }, ...f.lineItems.slice(1)]
+          : (f.lineItems.length > 0 ? f.lineItems : [{ description: "", qty: 1, price: "", notes: "" }])
+      };
+    });
   };
 
   const clearDraft = () => { try { localStorage.removeItem(DRAFT_KEY); } catch (e) {} };

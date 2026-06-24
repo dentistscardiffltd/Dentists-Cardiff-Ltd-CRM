@@ -26,7 +26,7 @@ export const BUSINESS = {
 };
 
 export const JOB_STATUSES = ["Booked", "In Progress", "Completed", "Invoiced", "Cancelled"];
-export const LEAD_STATUSES = ["New", "Booked", "N/A"];
+export const LEAD_STATUSES = ["New", "Contacted", "Booked", "N/A"];
 export const INVOICE_STATUSES = ["Draft", "Sent", "Paid"];
 
 // Common services for quick line-item entry on invoices. Edit prices/labels
