@@ -96,9 +96,9 @@ function LeadSearch({ onPick }) {
   const matches = (leads || []).filter(l => {
     const q = String(query || "").trim().toLowerCase();
     if (!q) return false;
-    return (l.name || "").toLowerCase().includes(q)
-      || (l.vehicleReg || "").toLowerCase().includes(q)
-      || (l.phone || "").toLowerCase().includes(q);
+    return String(l.name || "").toLowerCase().includes(q)
+      || String(l.vehicleReg || "").toLowerCase().includes(q)
+      || String(l.phone || "").toLowerCase().includes(q);
   }).slice(0, 6);
 
   return (

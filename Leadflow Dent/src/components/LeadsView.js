@@ -186,8 +186,8 @@ function LeadDetail({ lead, onStatusChange, onConvert, onDone }) {
 
       <div style={{ display: "flex", gap: 10 }}>
         <Button onClick={onConvert} style={{ flex: 1 }}>🔧 Convert to Job</Button>
-        <Button variant="outline" onClick={() => window.open(`tel:${(lead.phone || "").replace(/\s/g, "")}`)}>📞</Button>
-        <Button variant="outline" onClick={() => window.open(`mailto:${lead.email || ""}`)}>✉️</Button>
+        <Button variant="outline" onClick={() => window.open(`tel:${String(lead.phone || "").replace(/\s/g, "")}`)}>📞</Button>
+        <Button variant="outline" onClick={() => window.open(`mailto:${String(lead.email || "")}`)}>✉️</Button>
       </div>
       <Button variant="outline" onClick={onDone} style={{ width: "100%", marginTop: 10 }}>✓ Done</Button>
     </div>
