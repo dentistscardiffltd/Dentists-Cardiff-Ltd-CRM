@@ -5,7 +5,7 @@ import { LEAD_STATUSES } from "../config";
 import Header from "./Header";
 import { Card, Badge, Button, Modal, EmptyState, Spinner, Field, Select, Input, Textarea } from "./shared";
 
-const statusColors = { New: t.green, Contacted: t.amber, Quoted: t.amber, Converted: t.green, Lost: t.dim };
+const statusColors = { New: t.green, Booked: t.amber, "N/A": t.dim };
 
 function timeAgo(ts) {
   if (!ts) return "";
@@ -25,6 +25,7 @@ export default function LeadsView({ onConvertedToJob }) {
   const [error, setError] = useState(null);
   const [selected, setSelected] = useState(null);
   const [converting, setConverting] = useState(false);
+  const [filter, setFilter] = useState("New");
 
   const load = useCallback(() => {
     apiGet("getLeads").then(d => setLeads(d.leads)).catch(e => setError(e.message));
@@ -41,13 +42,29 @@ export default function LeadsView({ onConvertedToJob }) {
   return (
     <div style={{ paddingBottom: 80 }}>
       <Header title="Leads" right={<Button variant="ghost" onClick={load}>↻</Button>} />
+
+      <div style={{ display: "flex", gap: 6, padding: "12px 16px 0" }} className="no-print">
+        {LEAD_STATUSES.map(s => (
+          <button key={s} onClick={() => setFilter(s)} style={{
+            flex: 1, padding: "8px 0", borderRadius: 10, fontSize: 12, fontWeight: 800,
+            border: `1px solid ${filter === s ? t.green : t.border}`,
+            background: filter === s ? `${t.green}1a` : "transparent",
+            color: filter === s ? t.green : t.muted, cursor: "pointer"
+          }}>
+            {s === "New" ? "New" : s === "Booked" ? "Booked" : "N/A"}
+          </button>
+        ))}
+      </div>
+
       <div style={{ padding: 16 }}>
         {leads === null && !error && <Spinner />}
         {error && <EmptyState icon="⚠️" title="Couldn't load leads" sub={error} />}
-        {leads && leads.length === 0 && <EmptyState icon="📥" title="No leads yet" sub="New website enquiries will show up here." />}
-        {leads && leads.length > 0 && (
+        {leads && leads.filter(l => (l.status || "New") === filter).length === 0 && (
+          <EmptyState icon="📥" title={`No ${filter} leads`} sub={filter === "New" ? "New website enquiries will show up here." : undefined} />
+        )}
+        {leads && leads.filter(l => (l.status || "New") === filter).length > 0 && (
           <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
-            {leads.map(lead => (
+            {leads.filter(l => (l.status || "New") === filter).map(lead => (
               <Card key={lead.id} onClick={() => setSelected(lead)}>
                 <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start" }}>
                   <div>
@@ -157,6 +174,7 @@ function LeadDetail({ lead, onStatusChange, onConvert }) {
       <div style={{ display: "flex", gap: 10 }}>
         <Button onClick={onConvert} style={{ flex: 1 }}>🔧 Convert to Job</Button>
         <Button variant="outline" onClick={() => window.open(`tel:${(lead.phone || "").replace(/\s/g, "")}`)}>📞</Button>
+        <Button variant="outline" onClick={() => window.open(`mailto:${lead.email || ""}`)}>✉️</Button>
       </div>
     </div>
   );
