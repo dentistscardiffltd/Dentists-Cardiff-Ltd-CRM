@@ -94,8 +94,8 @@ function LeadSearch({ onPick }) {
   }, []);
 
   const matches = (leads || []).filter(l => {
-    if (!query.trim()) return false;
-    const q = query.toLowerCase();
+    const q = String(query || "").trim().toLowerCase();
+    if (!q) return false;
     return (l.name || "").toLowerCase().includes(q)
       || (l.vehicleReg || "").toLowerCase().includes(q)
       || (l.phone || "").toLowerCase().includes(q);
@@ -111,7 +111,7 @@ function LeadSearch({ onPick }) {
           onFocus={() => setOpen(true)}
         />
       </Field>
-      {open && query.trim() && (
+      {open && String(query || "").trim() && (
         <div style={{
           position: "absolute", top: "100%", left: 0, right: 0, zIndex: 20,
           background: "#11140d", border: `1px solid ${t.border}`, borderRadius: 10,
@@ -121,7 +121,7 @@ function LeadSearch({ onPick }) {
           {leads && matches.length === 0 && <div style={{ padding: 12, fontSize: 13, color: t.muted }}>No matching leads</div>}
           {matches.map(l => (
             <div key={l.id}
-              onClick={() => { onPick(l); setQuery(l.name); setOpen(false); }}
+              onClick={() => { onPick(l); setQuery(l.name || ""); setOpen(false); }}
               style={{ padding: "10px 12px", borderBottom: `1px solid ${t.border}`, cursor: "pointer" }}>
               <div style={{ fontWeight: 700, fontSize: 13 }}>{l.name}</div>
               <div style={{ fontSize: 12, color: t.muted }}>{l.vehicleMakeModel} · {l.vehicleReg} · {l.phone}</div>
